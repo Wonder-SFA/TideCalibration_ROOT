@@ -72,16 +72,29 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               {calibration.rmsErrorPct !== null && ` • RMS error ±${calibration.rmsErrorPct}%`}
             </p>
           </div>
-          <span
-            className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${
-              confidenceBadge[calibration.confidence]
-            }`}
-          >
-            {calibration.confidence === 'none'
-              ? 'Needs Data'
-              : `${calibration.confidence} confidence`}
-          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            {calibration.solverStage !== 'none' && (
+              <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-teal-100 ring-1 ring-white/25">
+                {calibration.solverStage === 'stage2-12h' ? 'Stage 2 (±12h)' : 'Stage 1 (±6h)'}
+              </span>
+            )}
+            <span
+              className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${
+                confidenceBadge[calibration.confidence]
+              }`}
+            >
+              {calibration.confidence === 'none'
+                ? 'Needs Data'
+                : `${calibration.confidence} confidence`}
+            </span>
+          </div>
         </div>
+
+        {calibration.stageNote && (
+          <div className="mt-3 rounded-xl bg-white/10 px-3.5 py-2 text-xs text-teal-100 ring-1 ring-white/15">
+            {calibration.stageNote}
+          </div>
+        )}
 
         {calibration.ambiguousInversion && (
           <div className="mt-4 flex items-start gap-2.5 rounded-xl bg-amber-500/20 px-3.5 py-2.5 text-xs text-amber-100 ring-1 ring-amber-300/30">

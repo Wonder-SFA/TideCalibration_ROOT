@@ -103,6 +103,9 @@ export interface CalibrationResult {
   altInversionMinutes: number | null;
   ambiguousInversion: boolean;
   confidence: 'none' | 'preliminary' | 'moderate' | 'high';
+  solverStage: 'none' | 'stage1-6h' | 'stage2-12h';
+  searchWindowHours: 0 | 6 | 12;
+  stageNote: string | null;
   rmsErrorPct: number | null;
   perObservationResiduals: Record<string, ObservationResidual>;
   landmarkThresholds: LandmarkThreshold[];

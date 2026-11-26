@@ -126,6 +126,27 @@ function stageMatchesSlope(stage: Observation['stage'], slope: 'rising' | 'falli
   return true;
 }
 
+function spansBothDailyCycles(observations: Observation[]): boolean {
+  if (observations.length < 2) return false;
+  const minutesOfDay = observations.map((obs) => {
+    const d = new Date(obs.timestampMs);
+    return d.getUTCHours() * 60 + d.getUTCMinutes();
+  });
+  const hasMorning = minutesOfDay.some((m) => m < 720);
+  const hasAfternoonEvening = minutesOfDay.some((m) => m >= 720);
+  if (!hasMorning || !hasAfternoonEvening) return false;
+
+  let maxCircularSep = 0;
+  for (let i = 0; i < minutesOfDay.length; i++) {
+    for (let j = i + 1; j < minutesOfDay.length; j++) {
+      const diff = Math.abs(minutesOfDay[i] - minutesOfDay[j]);
+      const circular = Math.min(diff, 1440 - diff);
+      if (circular > maxCircularSep) maxCircularSep = circular;
+    }
+  }
+  return maxCircularSep >= 360;
+}
+
 export function solveCalibration(
   spot: CalibrationSpot,
   observations: Observation[]
@@ -172,6 +193,9 @@ export function solveCalibration(
       altInversionMinutes: null,
       ambiguousInversion: false,
       confidence: 'none',
+      solverStage: 'none',
+      searchWindowHours: 0,
+      stageNote: null,
       rmsErrorPct: null,
       perObservationResiduals: {},
       landmarkThresholds: thresholds,
@@ -179,11 +203,19 @@ export function solveCalibration(
     };
   }
 
-  // Grid search offsetMinutes in [-360, +360] in 5-min increments.
+  const isStage2 = observations.length >= 4 && spansBothDailyCycles(observations);
+  const maxOffsetMin = isStage2 ? 720 : 360;
+  const solverStage: CalibrationResult['solverStage'] = isStage2 ? 'stage2-12h' : 'stage1-6h';
+  const searchWindowHours: CalibrationResult['searchWindowHours'] = isStage2 ? 12 : 6;
+  const stageNote = isStage2
+    ? 'Full ±12h diurnal calibration active — matching both turning-point timing and daily high/low inequality.'
+    : 'Timing calibrated — log a photo from the opposite daily tide cycle to confirm which peak/low is larger.';
+
+  // Grid search offsetMinutes in [-maxOffsetMin, +maxOffsetMin] in 5-min increments.
   // Convention: Local Tide at time T ≈ Baseline Chart at time (T - offsetMinutes).
   // So positive offsetMinutes means Local Tide occurs LATER than Baseline Chart.
   const scores: Array<{ offset: number; loss: number }> = [];
-  for (let offset = -360; offset <= 360; offset += 5) {
+  for (let offset = -maxOffsetMin; offset <= maxOffsetMin; offset += 5) {
     let totalSq = 0;
     let penalty = 0;
     let validCount = 0;
@@ -216,6 +248,9 @@ export function solveCalibration(
       altInversionMinutes: null,
       ambiguousInversion: false,
       confidence: 'none',
+      solverStage: 'none',
+      searchWindowHours: 0,
+      stageNote: null,
       rmsErrorPct: null,
       perObservationResiduals: {},
       landmarkThresholds: thresholds,
@@ -279,6 +314,9 @@ export function solveCalibration(
     altInversionMinutes,
     ambiguousInversion,
     confidence,
+    solverStage,
+    searchWindowHours,
+    stageNote,
     rmsErrorPct,
     perObservationResiduals: residuals,
     landmarkThresholds: thresholds,
